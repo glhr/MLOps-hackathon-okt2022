@@ -6,3 +6,6 @@ gcsfs
 pydantic
 fastapi
 uvicorn
+transformers
+datasets
+torch
