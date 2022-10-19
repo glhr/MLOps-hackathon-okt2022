@@ -2,16 +2,16 @@ from typing import List
 from pydantic import BaseModel
 from fastapi import FastAPI
 
-from logic import get_reddits, reddits_to_df, get_tweets, tweets_to_df
+from logic import get_reddits, reddits_to_df, get_tweets, tweets_to_df, get_subreddits
 
 
 app = FastAPI()
 
 
 class RedditRequest(BaseModel):
-    subreddits: List[str]
     feed: str = "hot"
-    limit: int = 100
+    post_limit: int = 100
+    subreddit_limit: int = 100
     dest: str
 
 
@@ -19,9 +19,14 @@ class RedditRequest(BaseModel):
 def api_reddit(req: RedditRequest):
     try:
         reddits = []
-        for subr in req.subreddits:
-            reddits += get_reddits(subr, req.feed, req.limit)
+        class_id = []
+        subreddits = get_subreddits(top_n=req.subreddit_limit)
+        for i,subr in enumerate(subreddits):
+            reddit = [r for r in get_reddits(subr, req.feed, req.post_limit) if len(r.selftext)]
+            reddits += reddit
+            class_id.extend([i]*len(reddit))
         df = reddits_to_df(reddits)
+        df['subreddit_id'] = class_id
         df.to_gbq(req.dest) #write to the Big Query bucket specified by dest. change if you want some other behavior.
     except Exception as e:
         return repr(e)

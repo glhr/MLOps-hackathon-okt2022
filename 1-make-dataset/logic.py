@@ -5,6 +5,7 @@ import tweepy
 import praw
 from tweepy.models import Status as Tweet
 from praw.models.reddit.submission import Submission as RedditPost
+from praw.models import Subreddits
 import yaml
 
 config = yaml.safe_load(open("secrets.yaml"))
@@ -20,6 +21,12 @@ def get_twitter_client():
     )
     cli = tweepy.API(twitter_auth)
     return cli
+
+
+def get_subreddits(top_n):
+    cli = get_reddit_client()
+    subreddits = cli.subreddits.popular(limit=top_n)
+    return list(subreddit.display_name for subreddit in subreddits)
 
 
 def get_tweets(user, limit):
@@ -66,9 +73,10 @@ def reddits_to_df(submissions: Iterable[RedditPost]):
             # "obj": subm,
             "id": subm.id,
             "created_at": subm.created_utc,
-            "source": f"reddit/{subm.subreddit.display_name}",
-            "text": subm.title,
+            "subreddit": f"{subm.subreddit.display_name}",
+            "post_title": subm.title,
             "url": subm.url,
+            "post_content": subm.selftext
         }
         for subm in submissions
     )

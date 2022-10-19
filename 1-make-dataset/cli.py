@@ -1,4 +1,4 @@
-from logic import get_reddits, reddits_to_df, get_tweets, tweets_to_df
+from logic import get_reddits, reddits_to_df, get_tweets, tweets_to_df, get_subreddits
 import click
 
 
@@ -9,14 +9,22 @@ def cli():
 
 @cli.command()
 @click.argument("output", type=click.File("wb"))
-@click.argument("subreddits", nargs=-1)
 @click.option("--feed", default="hot")
 @click.option("--limit", type=int, default=100)
-def reddit(output, subreddits, feed, limit):
+def reddit(output, feed, limit):
+    subreddits = get_subreddits(top_n=100)
+    print(subreddits)
     reddits = []
-    for subr in subreddits:
-        reddits += get_reddits(subr, feed, limit)
+    class_id = []
+    for i,subr in enumerate(subreddits):
+        reddit = [r for r in get_reddits(subr, feed, limit) if len(r.selftext)]
+        print(reddit)
+        reddits += reddit
+        class_id.extend([i]*len(reddit))
     df = reddits_to_df(reddits)
+    print(df)
+    print(class_id)
+    df['subreddit_id'] = class_id
     df.to_csv(output)
 
 
