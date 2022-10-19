@@ -17,13 +17,13 @@ def reddit(output, feed, limit):
     reddits = []
     class_id = []
     for i,subr in enumerate(subreddits):
-        reddit = [r for r in get_reddits(subr, feed, limit) if len(r.selftext)]
-        print(reddit)
+        reddit = [r for r in get_reddits(subr, feed, limit)]
+        print(subr)
         reddits += reddit
         class_id.extend([i]*len(reddit))
     df = reddits_to_df(reddits)
-    print(df)
-    print(class_id)
+    #print(df)
+    #print(class_id)
     df['subreddit_id'] = class_id
     df.to_csv(output)
 
