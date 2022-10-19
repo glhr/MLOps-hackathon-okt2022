@@ -17,10 +17,10 @@ class RedditRequest(BaseModel):
 def api_reddit(req: RedditRequest):
     try:
         df = pd.read_csv("output.csv", index_col=None).fillna(value = "None")
-        print(df)
+        df.drop(df.columns[0],axis=1,inplace=True)
         df.to_gbq(req.dest, if_exists="replace") #write to the Big Query bucket specified by dest. change if you want some other behavior.
     except Exception as e:
-        return repr(e)
+        return repr(e), repr(df.columns)
     return "OK"
 
 
