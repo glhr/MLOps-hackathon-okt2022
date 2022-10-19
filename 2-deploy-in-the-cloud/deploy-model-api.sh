@@ -6,5 +6,3 @@ gcloud run deploy interaction-service \
     --memory=1Gi \
     --region=us-central1 \
     --project=rational-energy-366007
-export api=$(gcloud run services describe reddit-fetch-service --region us-central1 --format 'value(status.url)')
-export token=$(gcloud auth print-identity-token)
