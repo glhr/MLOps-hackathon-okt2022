@@ -17,7 +17,7 @@ import torch
 import os
 import pandas as pd
 import datasets
-import TextClassificationPipeline
+from transformers import TextClassificationPipeline
 os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = "python"
 
 app = FastAPI()
@@ -58,7 +58,6 @@ class TrainRequest(BaseModel):
 
 @app.post("/train")
 def train_model(req: TrainRequest):
-    ds = req.dataset
     ds = pd.read_csv(req.dataset)
     key,ind = np.unique(ds['subreddit_id'],return_index=True)
     value = ds.subreddit[ind]
