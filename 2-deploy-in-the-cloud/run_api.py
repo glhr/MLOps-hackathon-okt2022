@@ -45,6 +45,10 @@ def pull_model():
 
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name=bucket_name)
+
+    label_blob=bucket.blob(f'label_map.pickle')
+    label_blob.download_to_filename(f'label_map.pickle')
+
     blobs = bucket.list_blobs(prefix=prefix)  # Get list of files
 
     Path(dl_dir).mkdir(parents=True, exist_ok=True)
@@ -52,14 +56,14 @@ def pull_model():
         filename = blob.name.split("/")[-1]
         blob.download_to_filename(dl_dir + filename)  # Download
 
+if not Path("model-dl.pt/pytorch_model.bin").is_file() or not Path("label_map.pickle").is_file():
+    print("pulling trained model and label map")
+    pull_model()
 
 with open('label_map.pickle', 'rb') as handle:
-    print("pulling label map")
     label_map = pickle.load(handle)
 
-if not Path("model-dl.pt/pytorch_model.bin").is_file():
-    print("pulling trained model")
-    pull_model()
+
 
 
 def compute_metrics(eval_pred):
