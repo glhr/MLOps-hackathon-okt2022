@@ -1,5 +1,6 @@
 model
 model.pt
+model-dl.pt
 label_map.pickle
 model.pkl
 venv

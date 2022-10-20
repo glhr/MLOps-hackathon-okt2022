@@ -29,19 +29,6 @@ app = FastAPI()
 model_name = 'distilbert-base-uncased'
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-
-def compute_metrics(eval_pred):
-    metric = load_metric("accuracy")
-    logits, labels = eval_pred
-    predictions = np.argmax(logits, axis=-1)
-    acc =  metric.compute(predictions=predictions, references=labels)
-    return acc
-
-def tok_func(x):
-    tok_x = tokenizer(x["x"], padding=True, truncation=True)
-    tok_x['label'] = x['label']
-    return tok_x
-
 def push_model():
     storage_client = storage.Client()
     bucket = storage_client.bucket("dataset-csv")
@@ -64,6 +51,29 @@ def pull_model():
     for blob in blobs:
         filename = blob.name.split("/")[-1]
         blob.download_to_filename(dl_dir + filename)  # Download
+
+
+with open('label_map.pickle', 'rb') as handle:
+    print("pulling label map")
+    label_map = pickle.load(handle)
+
+if not Path("model-dl.pt/pytorch_model.bin").is_file():
+    print("pulling trained model")
+    pull_model()
+
+
+def compute_metrics(eval_pred):
+    metric = load_metric("accuracy")
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    acc =  metric.compute(predictions=predictions, references=labels)
+    return acc
+
+def tok_func(x):
+    tok_x = tokenizer(x["x"], padding=True, truncation=True)
+    tok_x['label'] = x['label']
+    return tok_x
+
 
 
 class TrainRequest(BaseModel):
@@ -120,12 +130,7 @@ class PredictRequest(BaseModel):
 @app.post("/predict",response_class=PlainTextResponse)
 def predict(req: PredictRequest):
 
-    with open('label_map.pickle', 'rb') as handle:
-        label_map = pickle.load(handle)
     num_labels = len(label_map)
-
-    if not Path("model-dl.pt/pytorch_model.bin").is_file():
-        pull_model()
 
     model = AutoModelForSequenceClassification.from_pretrained('model-dl.pt',num_labels=num_labels)
     model_name = 'distilbert-base-uncased'
