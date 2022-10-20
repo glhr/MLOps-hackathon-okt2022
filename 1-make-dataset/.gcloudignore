@@ -1,0 +1,6 @@
+askreddit.csv
+venv
+.git
+.cache
+__pycache__
+dataset.zip
