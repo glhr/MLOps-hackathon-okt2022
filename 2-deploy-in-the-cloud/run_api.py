@@ -21,6 +21,7 @@ import datasets
 from transformers import TextClassificationPipeline
 os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = "python"
 from google.cloud import storage
+from pathlib import Path
 
 
 app = FastAPI()
@@ -40,20 +41,29 @@ def tok_func(x):
     tok_x = tokenizer(x["x"], padding=True, truncation=True)
     tok_x['label'] = x['label']
     return tok_x
-def save_model(clf, model_path):
+
+def push_model():
     storage_client = storage.Client()
     bucket = storage_client.bucket("dataset-csv")
-    blob = bucket.blob("model.pt")
-    with blob.open("wb", ignore_flush=True) as f:
-    #with open(model_path,"wb") as f:
-        torch.save(clf, f)
+    for file in Path("model.pt").glob("*"):
+        blob = bucket.blob(f'model.pt/{file.name}')
+        print(f"uploading {file}")
+        blob.upload_from_filename(file)
+
 @cache
-def load_model(model_path):
+def pull_model():
+    bucket_name = 'dataset-csv'
+    prefix = 'model.pt/'
+    dl_dir = 'model-dl.pt/'
+
     storage_client = storage.Client()
-    bucket = storage_client.bucket("dataset-csv")
-    blob = bucket.blob("model.pt")
-    with blob.open("rb", ignore_flush=True) as f:
-        return torch.load(f)
+    bucket = storage_client.bucket(bucket_name=bucket_name)
+    blobs = bucket.list_blobs(prefix=prefix)  # Get list of files
+
+    Path(dl_dir).mkdir(parents=True, exist_ok=True)
+    for blob in blobs:
+        filename = blob.name.split("/")[-1]
+        blob.download_to_filename(dl_dir + filename)  # Download
 
 
 class TrainRequest(BaseModel):
@@ -98,7 +108,7 @@ def train_model(req: TrainRequest):
                   tokenizer=tokenizer, compute_metrics=compute_metrics)
     trainer.train();
     trainer.save_model("model.pt")
-    #save_model(trainer.model)
+    push_model()
 
 
 
@@ -113,7 +123,11 @@ def predict(req: PredictRequest):
     with open('label_map.pickle', 'rb') as handle:
         label_map = pickle.load(handle)
     num_labels = len(label_map)
-    model = AutoModelForSequenceClassification.from_pretrained('model.pt',num_labels=num_labels)
+
+    if not Path("model-dl.pt/pytorch_model.bin").is_file():
+        pull_model()
+
+    model = AutoModelForSequenceClassification.from_pretrained('model-dl.pt',num_labels=num_labels)
     model_name = 'distilbert-base-uncased'
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     pipe = TextClassificationPipeline(model=model, tokenizer=tokenizer, top_k=3)
